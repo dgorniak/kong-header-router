@@ -1,0 +1,9 @@
+# servroot is typically the nginx/Kong workingdirectory when testing
+servroot
+
+# packed distribution format for LuaRocks
+*.rock
+
+# Intelij Idea config
+.idea
+
