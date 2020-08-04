@@ -31,6 +31,7 @@ describe(PLUGIN_NAME .. ": (schema)", function()
         { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"}, },
       }})
 
+    assert.is_truthy(err)
     assert.is_falsy(ok)
   end)
 
@@ -38,6 +39,7 @@ describe(PLUGIN_NAME .. ": (schema)", function()
     local ok, err = validate(
       { })
 
+    assert.is_truthy(err)
     assert.is_falsy(ok)
   end)
 
