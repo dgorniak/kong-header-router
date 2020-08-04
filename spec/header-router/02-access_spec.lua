@@ -10,28 +10,28 @@ for _, strategy in helpers.each_strategy() do
   describe(PLUGIN_NAME .. ": (access) [#" .. strategy .. "]", function()
 
     local client
-    local defaultPort
-    local alternatePort
-    local defaultServer
-    local alternateServer
+    local default_port
+    local alternate_port
+    local default_server
+    local alternate_server
 
     lazy_setup(function()
 
       local bp = helpers.get_db_utils(strategy, nil, { PLUGIN_NAME })
 
-      local europeUpstream = bp.upstreams:insert({
+      local europe_upstream = bp.upstreams:insert({
         name = "europe_cluster"
       })
 
-      defaultPort = bu.add_target(bp, europeUpstream.id, "127.0.0.1")
+      default_port = bu.add_target(bp, europe_upstream.id, "127.0.0.1")
 
-      local italyUpstream = bp.upstreams:insert({
+      local italy_upstream = bp.upstreams:insert({
         name = "italy_cluster"
       })
 
-      alternatePort = bu.add_target(bp, italyUpstream.id, "127.0.0.1")
+      alternate_port = bu.add_target(bp, italy_upstream.id, "127.0.0.1")
 
-      local defaultService = bp.services:insert {
+      local default_service = bp.services:insert {
         protocol = "http",
         name = "dafault_service",
         host = "europe_cluster"
@@ -39,10 +39,10 @@ for _, strategy in helpers.each_strategy() do
 
       bp.routes:insert({
         paths = {ROUTE_PATH},
-        service = {id = defaultService.id}
+        service = {id = default_service.id}
       })
 
-      local alternateService = bp.services:insert {
+      local alternate_service = bp.services:insert {
         protocol = "http",
         name = "alternate_service",
         host = "europe_cluster"
@@ -50,12 +50,12 @@ for _, strategy in helpers.each_strategy() do
 
       bp.routes:insert({
         paths = {ALTERNATE_ROUTE_PATH},
-        service = {id = alternateService.id}
+        service = {id = alternate_service.id}
       })
 
       bp.plugins:insert {
         name = PLUGIN_NAME,
-        service = { id = defaultService.id },
+        service = { id = default_service.id },
         config = {
           rules = {
             { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"}, upstream_name = "italy_cluster" },
@@ -65,7 +65,7 @@ for _, strategy in helpers.each_strategy() do
 
       bp.plugins:insert {
         name = PLUGIN_NAME,
-        service = { id = alternateService.id },
+        service = { id = alternate_service.id },
         config = {
           rules = {
             { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Umbria"}, upstream_name = "europe_cluster"},
@@ -90,8 +90,8 @@ for _, strategy in helpers.each_strategy() do
       client = helpers.proxy_client()
 
       -- setup target servers
-      defaultServer =  bu.http_server("127.0.0.1", defaultPort, {REQUEST_COUNT}, "false", "http")
-      alternateServer = bu.http_server("127.0.0.1", alternatePort, {REQUEST_COUNT}, "false", "http")
+      default_server =  bu.http_server("127.0.0.1", default_port, {REQUEST_COUNT}, "false", "http")
+      alternate_server = bu.http_server("127.0.0.1", alternate_port, {REQUEST_COUNT}, "false", "http")
 
     end)
 
@@ -109,12 +109,12 @@ for _, strategy in helpers.each_strategy() do
         end
 
         -- collect server results; hitcount
-        local _, defaultRequestCount, defaultErrors = defaultServer:done()
-        local _, alternateRequestCount, alternateErrors = alternateServer:done()
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
 
         -- verify
-        assert.same({REQUEST_COUNT, 0}, {defaultRequestCount, defaultErrors})
-        assert.same({0, 0}, {alternateRequestCount, alternateErrors})
+        assert.same({REQUEST_COUNT, 0}, {default_request_count, default_errors_count})
+        assert.same({0, 0}, {alternate_request_count, alternate_errors})
 
       end)
     end)
@@ -130,12 +130,12 @@ for _, strategy in helpers.each_strategy() do
         assert.response(r).has.status(200)
       end
 
-      local _, defaultRequestCount, defaultErrors = defaultServer:done()
-      local _, alternateRequestCount, alternateErrors = alternateServer:done()
+      local _, default_request_count, default_errors_count = default_server:done()
+      local _, alternate_request_count, alternate_errors = alternate_server:done()
 
       -- verify
-      assert.same({0, 0}, {defaultRequestCount, defaultErrors})
-      assert.same({REQUEST_COUNT, 0}, {alternateRequestCount, alternateErrors})
+      assert.same({0, 0}, {default_request_count, default_errors_count})
+      assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
 
 
     end)
@@ -151,12 +151,12 @@ for _, strategy in helpers.each_strategy() do
         assert.response(r).has.status(200)
       end
 
-      local _, defaultRequestCount, defaultErrors = defaultServer:done()
-      local _, alternateRequestCount, alternateErrors = alternateServer:done()
+      local _, default_request_count, default_errors_count = default_server:done()
+      local _, alternate_request_count, alternate_errors = alternate_server:done()
 
       -- verify
-      assert.same({REQUEST_COUNT, 0}, {defaultRequestCount, defaultErrors})
-      assert.same({0, 0}, {alternateRequestCount, alternateErrors})
+      assert.same({REQUEST_COUNT, 0}, {default_request_count, default_errors_count})
+      assert.same({0, 0}, {alternate_request_count, alternate_errors})
 
 
     end)
@@ -172,12 +172,12 @@ for _, strategy in helpers.each_strategy() do
         assert.response(r).has.status(404)
       end
 
-      local _, defaultRequestCount, defaultErrors = defaultServer:done()
-      local _, alternateRequestCount, alternateErrors = alternateServer:done()
+      local _, default_request_count, default_errors_count = default_server:done()
+      local _, alternate_request_count, alternate_errors = alternate_server:done()
 
       -- verify
-      assert.same({0, 0}, {defaultRequestCount, defaultErrors})
-      assert.same({0, 0}, {alternateRequestCount, alternateErrors})
+      assert.same({0, 0}, {default_request_count, default_errors_count})
+      assert.same({0, 0}, {alternate_request_count, alternate_errors})
 
     end)
 
@@ -194,15 +194,14 @@ for _, strategy in helpers.each_strategy() do
       end
 
       -- collect server results; hitcount
-      local _, defaultRequestCount, defaultErrors = defaultServer:done()
-      local _, alternateRequestCount, alternateErrors = alternateServer:done()
+      local _, default_request_count, default_errors_count = default_server:done()
+      local _, alternate_request_count, alternate_errors = alternate_server:done()
 
       -- verify
-      assert.same({0, 0}, {defaultRequestCount, defaultErrors})
-      assert.same({REQUEST_COUNT, 0}, {alternateRequestCount, alternateErrors})
+      assert.same({0, 0}, {default_request_count, default_errors_count})
+      assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
 
     end)
-
   end)
 
 end
