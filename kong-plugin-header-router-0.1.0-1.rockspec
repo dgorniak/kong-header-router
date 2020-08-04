@@ -1,27 +1,23 @@
-package = "kong-plugin-myplugin"  -- TODO: rename, must match the info in the filename of this rockspec!
-                                  -- as a convention; stick to the prefix: `kong-plugin-`
-version = "0.1.0-1"               -- TODO: renumber, must match the info in the filename of this rockspec!
--- The version '0.1.0' is the source code version, the trailing '1' is the version of this rockspec.
--- whenever the source version changes, the rockspec should be reset to 1. The rockspec version is only
--- updated (incremented) when this file changes, but the source remains the same.
+package = "kong-plugin-header-router"
 
--- TODO: This is the name to set in the Kong configuration `plugins` setting.
--- Here we extract it from the package name.
-local pluginName = package:match("^kong%-plugin%-(.+)$")  -- "myplugin"
+version = "0.1.0-2"
+
+local pluginName = package:match("^kong%-plugin%-(.+)$")  -- "header-router"
 
 supported_platforms = {"linux", "macosx"}
+
 source = {
-  url = "http://github.com/Kong/kong-plugin.git",
+  url = "https://github.com/dgorniak/kong-header-router",
   tag = "0.1.0"
 }
 
 description = {
-  summary = "Kong is a scalable and customizable API Management Layer built on top of Nginx.",
-  homepage = "http://getkong.org",
+  summary = "Kong plugin to override default service upstream based on custom headers.",
   license = "Apache 2.0"
 }
 
 dependencies = {
+  "lua >= 5.1"
 }
 
 build = {
