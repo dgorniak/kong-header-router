@@ -37,7 +37,7 @@ for _, strategy in helpers.each_strategy() do
         host = "europe_cluster"
       }
 
-      local defaultRoute = bp.routes:insert({
+      bp.routes:insert({
         paths = {ROUTE_PATH},
         service = {id = defaultService.id}
       })
@@ -48,7 +48,7 @@ for _, strategy in helpers.each_strategy() do
         host = "europe_cluster"
       }
 
-      local alternateRoute = bp.routes:insert({
+      bp.routes:insert({
         paths = {ALTERNATE_ROUTE_PATH},
         service = {id = alternateService.id}
       })
