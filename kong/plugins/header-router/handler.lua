@@ -5,6 +5,23 @@ local HeaderRouter = {
   VERSION = "0.1",
 }
 
+local function match_rule(rule)
+  for headerName,headerValue in pairs(rule.condition) do
+    local requestHeaderValue = kong.request.get_header(headerName)
+    if requestHeaderValue ~= headerValue then return end
+  end
+  return true
+end
+
+local function find_corresponding_upstream(rules)
+  for i,rule in ipairs(rules) do
+    local ruleUpstream = rule["upstream_name"]
+
+    if match_rule(rule) then return ruleUpstream end
+
+  end
+end
+
 function HeaderRouter:access(plugin_conf)
 
   local rules = plugin_conf.rules
@@ -19,19 +36,6 @@ function HeaderRouter:access(plugin_conf)
     end
   end
 
-end
-
-function find_corresponding_upstream(rules)
-  for i,rule in ipairs(rules) do
-    local ruleUpstream = rule["upstream_name"]
-
-    for headerName,headerValue in pairs(rule.condition) do
-      local requestHeaderValue = kong.request.get_header(headerName)
-      if requestHeaderValue ~= headerValue then return end
-    end
-
-    return ruleUpstream
-  end
 end
 
 return HeaderRouter

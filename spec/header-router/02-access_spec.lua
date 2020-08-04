@@ -4,6 +4,7 @@ local bu = require "spec.fixtures.balancer_utils"
 local PLUGIN_NAME = "header-router"
 local REQUEST_COUNT = 1
 local ROUTE_PATH = "/local"
+local ALTERNATE_ROUTE_PATH = "/alternate"
 
 for _, strategy in helpers.each_strategy() do
   describe(PLUGIN_NAME .. ": (access) [#" .. strategy .. "]", function()
@@ -18,34 +19,56 @@ for _, strategy in helpers.each_strategy() do
 
       local bp = helpers.get_db_utils(strategy, nil, { PLUGIN_NAME })
 
-      local defaultUpstream = bp.upstreams:insert({
+      local europeUpstream = bp.upstreams:insert({
         name = "europe_cluster"
       })
 
-      defaultPort = bu.add_target(bp, defaultUpstream.id, "127.0.0.1")
+      defaultPort = bu.add_target(bp, europeUpstream.id, "127.0.0.1")
 
-      local alternateUpstream = bp.upstreams:insert({
+      local italyUpstream = bp.upstreams:insert({
         name = "italy_cluster"
       })
 
-      alternatePort = bu.add_target(bp, alternateUpstream.id, "127.0.0.1")
+      alternatePort = bu.add_target(bp, italyUpstream.id, "127.0.0.1")
 
-      local service = bp.services:insert {
+      local defaultService = bp.services:insert {
         protocol = "http",
-        name = "mock_service",
+        name = "dafault_service",
         host = "europe_cluster"
       }
 
-      local route = bp.routes:insert({
+      local defaultRoute = bp.routes:insert({
         paths = {ROUTE_PATH},
-        service = {id = service.id}
+        service = {id = defaultService.id}
+      })
+
+      local alternateService = bp.services:insert {
+        protocol = "http",
+        name = "alternate_service",
+        host = "europe_cluster"
+      }
+
+      local alternateRoute = bp.routes:insert({
+        paths = {ALTERNATE_ROUTE_PATH},
+        service = {id = alternateService.id}
       })
 
       bp.plugins:insert {
         name = PLUGIN_NAME,
-        service = { id = service.id },
+        service = { id = defaultService.id },
         config = {
           rules = {
+            { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"}, upstream_name = "italy_cluster" },
+          }
+        },
+      }
+
+      bp.plugins:insert {
+        name = PLUGIN_NAME,
+        service = { id = alternateService.id },
+        config = {
+          rules = {
+            { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Umbria"}, upstream_name = "europe_cluster"},
             { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"}, upstream_name = "italy_cluster" },
           }
         },
@@ -157,6 +180,29 @@ for _, strategy in helpers.each_strategy() do
       assert.same({0, 0}, {alternateRequestCount, alternateErrors})
 
     end)
+
+    it("matching works not only for the first rule", function()
+
+      for i=1,REQUEST_COUNT do
+        local r = client:get(ALTERNATE_ROUTE_PATH, {
+          headers = {
+            ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
+          }
+        })
+
+        assert.response(r).has.status(200)
+      end
+
+      -- collect server results; hitcount
+      local _, defaultRequestCount, defaultErrors = defaultServer:done()
+      local _, alternateRequestCount, alternateErrors = alternateServer:done()
+
+      -- verify
+      assert.same({0, 0}, {defaultRequestCount, defaultErrors})
+      assert.same({REQUEST_COUNT, 0}, {alternateRequestCount, alternateErrors})
+
+    end)
+
   end)
 
 end
