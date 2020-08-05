@@ -1,10 +1,12 @@
 local helpers = require "spec.helpers"
 local bu = require "spec.fixtures.balancer_utils"
 
+
 local PLUGIN_NAME = "header-router"
 local REQUEST_COUNT = 1
 local ROUTE_PATH = "/local"
 local ALTERNATE_ROUTE_PATH = "/alternate"
+local DISABLE_DETAILED_LOGS = "false"
 
 for _, strategy in helpers.each_strategy() do
   describe(PLUGIN_NAME .. ": (access) [#" .. strategy .. "]", function()
@@ -89,9 +91,12 @@ for _, strategy in helpers.each_strategy() do
     before_each(function()
       client = helpers.proxy_client()
 
-      -- setup target servers
-      default_server =  bu.http_server("127.0.0.1", default_port, {REQUEST_COUNT}, "false", "http")
-      alternate_server = bu.http_server("127.0.0.1", alternate_port, {REQUEST_COUNT}, "false", "http")
+      -- Mock servers based on Balancer Utils HTTP Server - simple and good enough
+      -- to test if correct upstream is hit
+      default_server =  bu.http_server("127.0.0.1", default_port, {REQUEST_COUNT}, 
+        DISABLE_DETAILED_LOGS, "http")
+      alternate_server = bu.http_server("127.0.0.1", alternate_port, {REQUEST_COUNT}, 
+        DISABLE_DETAILED_LOGS, "http")
 
     end)
 

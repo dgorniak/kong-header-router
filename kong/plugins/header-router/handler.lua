@@ -2,6 +2,8 @@ local kong  = kong
 
 
 local HeaderRouter = {
+  -- plugin should be executed after authentication and transformation
+  -- phase, but before logging
   PRIORITY = 600,
   VERSION = "0.1",
 }
@@ -10,7 +12,7 @@ local HeaderRouter = {
 local function match_rule(rule)
   for header_name,header_value in pairs(rule.condition) do
     local request_header_value = kong.request.get_header(header_name)
-
+    -- all headers must be matched
     if request_header_value ~= header_value then
       return
     end
@@ -38,6 +40,7 @@ function HeaderRouter:access(plugin_conf)
   local alternate_upstream = find_corresponding_upstream(rules)
 
   if alternate_upstream then
+    -- sets alternate upstream if a rule is matched
     local ok, err = kong.service.set_upstream(alternate_upstream)
     if not ok then
       kong.log.err(err)
