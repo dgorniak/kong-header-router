@@ -75,7 +75,7 @@ for _, strategy in helpers.each_strategy() do
           }
         },
       }
-
+            
       -- start kong
       assert(helpers.start_kong({
         database   = strategy,
@@ -106,7 +106,9 @@ for _, strategy in helpers.each_strategy() do
 
 
     describe("header router", function()
+        
       it("routes to default upstream if routing header is not set", function()
+          
         for i=1,REQUEST_COUNT do
           local r = client:get(ROUTE_PATH)
 
@@ -122,91 +124,90 @@ for _, strategy in helpers.each_strategy() do
         assert.same({0, 0}, {alternate_request_count, alternate_errors})
 
       end)
-    end)
+      
+      it("routes to alternate upstream if all rule headers are set", function()
+        for i=1,REQUEST_COUNT do
+          local r = client:get(ROUTE_PATH, {
+            headers = {
+              ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
+            }
+          })
 
-    it("routes to alternate upstream if all rule headers are set", function()
-      for i=1,REQUEST_COUNT do
-        local r = client:get(ROUTE_PATH, {
-          headers = {
-            ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
-          }
-        })
+          assert.response(r).has.status(200)
+        end
 
-        assert.response(r).has.status(200)
-      end
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
 
-      local _, default_request_count, default_errors_count = default_server:done()
-      local _, alternate_request_count, alternate_errors = alternate_server:done()
+        -- verify
+        assert.same({0, 0}, {default_request_count, default_errors_count})
+        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
 
-      -- verify
-      assert.same({0, 0}, {default_request_count, default_errors_count})
-      assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+      end)
 
+      it("routes to default upstream if not all rule headers are set", function()
+        for i=1,REQUEST_COUNT do
+          local r = client:get(ROUTE_PATH, {
+            headers = {
+              ["X-Country"] = "Italy"
+            }
+          })
 
-    end)
+          assert.response(r).has.status(200)
+        end
 
-    it("routes to default upstream if not all rule headers are set", function()
-      for i=1,REQUEST_COUNT do
-        local r = client:get(ROUTE_PATH, {
-          headers = {
-            ["X-Country"] = "Italy"
-          }
-        })
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
 
-        assert.response(r).has.status(200)
-      end
-
-      local _, default_request_count, default_errors_count = default_server:done()
-      local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-      -- verify
-      assert.same({REQUEST_COUNT, 0}, {default_request_count, default_errors_count})
-      assert.same({0, 0}, {alternate_request_count, alternate_errors})
+        -- verify
+        assert.same({REQUEST_COUNT, 0}, {default_request_count, default_errors_count})
+        assert.same({0, 0}, {alternate_request_count, alternate_errors})
 
 
-    end)
+      end)
 
-    it("doesn't change default upstream for request not mapped by associated route", function()
-      for i=1,REQUEST_COUNT do
-        local r = client:get("/something", {
-          headers = {
-            ["X-Route"] = "Italy"
-          }
-        })
+      it("doesn't change default upstream for request not mapped by associated route", function()
+        for i=1,REQUEST_COUNT do
+          local r = client:get("/something", {
+            headers = {
+              ["X-Route"] = "Italy"
+            }
+          })
 
-        assert.response(r).has.status(404)
-      end
+          assert.response(r).has.status(404)
+        end
 
-      local _, default_request_count, default_errors_count = default_server:done()
-      local _, alternate_request_count, alternate_errors = alternate_server:done()
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
 
-      -- verify
-      assert.same({0, 0}, {default_request_count, default_errors_count})
-      assert.same({0, 0}, {alternate_request_count, alternate_errors})
+        -- verify
+        assert.same({0, 0}, {default_request_count, default_errors_count})
+        assert.same({0, 0}, {alternate_request_count, alternate_errors})
 
-    end)
+      end)
 
-    it("matching works not only for the first rule", function()
+      it("matching works not only for the first rule", function()
 
-      for i=1,REQUEST_COUNT do
-        local r = client:get(ALTERNATE_ROUTE_PATH, {
-          headers = {
-            ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
-          }
-        })
+        for i=1,REQUEST_COUNT do
+          local r = client:get(ALTERNATE_ROUTE_PATH, {
+            headers = {
+              ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
+            }
+          })
 
-        assert.response(r).has.status(200)
-      end
+          assert.response(r).has.status(200)
+        end
 
-      -- collect server results; hitcount
-      local _, default_request_count, default_errors_count = default_server:done()
-      local _, alternate_request_count, alternate_errors = alternate_server:done()
+        -- collect server results; hitcount
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
 
-      -- verify
-      assert.same({0, 0}, {default_request_count, default_errors_count})
-      assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+        -- verify
+        assert.same({0, 0}, {default_request_count, default_errors_count})
+        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
 
+      end)
+    
     end)
   end)
-
 end
