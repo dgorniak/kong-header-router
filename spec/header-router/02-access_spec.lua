@@ -4,8 +4,9 @@ local bu = require "spec.fixtures.balancer_utils"
 
 local PLUGIN_NAME = "header-router"
 local REQUEST_COUNT = 1
-local ROUTE_PATH = "/local"
+local LOCAL_ROUTE_PATH = "/local"
 local ALTERNATE_ROUTE_PATH = "/alternate"
+local ANOTHER_ROUTE_PATH = "/another"
 local DISABLE_DETAILED_LOGS = "false"
 
 for _, strategy in helpers.each_strategy() do
@@ -35,24 +36,35 @@ for _, strategy in helpers.each_strategy() do
 
       local default_service = bp.services:insert {
         protocol = "http",
-        name = "dafault_service",
+        name = "default_service",
         host = "europe_cluster"
       }
-
-      bp.routes:insert({
-        paths = {ROUTE_PATH},
-        service = {id = default_service.id}
-      })
-
+      
       local alternate_service = bp.services:insert {
         protocol = "http",
         name = "alternate_service",
+        host = "europe_cluster"
+      }
+      
+      local another_service = bp.services:insert {
+        protocol = "http",
+        name = "another_service",
         host = "europe_cluster"
       }
 
       bp.routes:insert({
         paths = {ALTERNATE_ROUTE_PATH},
         service = {id = alternate_service.id}
+      })
+    
+      bp.routes:insert({
+        paths = {LOCAL_ROUTE_PATH},
+        service = {id = default_service.id}
+      })
+
+      local another_route = bp.routes:insert({
+        paths   = {ANOTHER_ROUTE_PATH},
+        service = {id = another_service.id}
       })
 
       bp.plugins:insert {
@@ -75,6 +87,18 @@ for _, strategy in helpers.each_strategy() do
           }
         },
       }
+      
+      bp.plugins:insert {
+        name = PLUGIN_NAME,
+        service = { id = alternate_service.id },
+        config = {
+          rules = {
+            { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Umbria"}, upstream_name = "europe_cluster"},
+            { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"}, upstream_name = "italy_cluster" },
+          }
+        },
+      }
+
             
       -- start kong
       assert(helpers.start_kong({
@@ -110,7 +134,7 @@ for _, strategy in helpers.each_strategy() do
       it("routes to default upstream if routing header is not set", function()
           
         for i=1,REQUEST_COUNT do
-          local r = client:get(ROUTE_PATH)
+          local r = client:get(LOCAL_ROUTE_PATH)
 
           assert.response(r).has.status(200)
         end
@@ -127,7 +151,7 @@ for _, strategy in helpers.each_strategy() do
       
       it("routes to alternate upstream if all rule headers are set", function()
         for i=1,REQUEST_COUNT do
-          local r = client:get(ROUTE_PATH, {
+          local r = client:get(LOCAL_ROUTE_PATH, {
             headers = {
               ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
             }
@@ -144,12 +168,73 @@ for _, strategy in helpers.each_strategy() do
         assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
 
       end)
+  
+      it("routes to alternate upstream if more headers than required are set", function()
+        for i=1,REQUEST_COUNT do
+          local r = client:get(LOCAL_ROUTE_PATH, {
+            headers = {
+              ["X-Country"] = "Italy", ["host"] = "localhost", ["X-Regione"] = "Abruzzo",
+              ["X-Forwader-For"] = nil
+            }
+          })
 
+          assert.response(r).has.status(200)
+        end
+
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
+
+        -- verify
+        assert.same({0, 0}, {default_request_count, default_errors_count})
+        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+
+      end)
+      
+      it("routes to alternate upstream if plugin is enabled for a route", function()
+        for i=1,REQUEST_COUNT do
+          local r = client:get(ANOTHER_ROUTE_PATH, {
+            headers = {
+              ["X-Country"] = "Italy", ["host"] = "localhost", ["X-Regione"] = "Abruzzo",
+            }
+          })
+
+          assert.response(r).has.status(200)
+        end
+
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
+
+        -- verify
+        assert.same({0, 0}, {default_request_count, default_errors_count})
+        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+
+      end)
+      
       it("routes to default upstream if not all rule headers are set", function()
         for i=1,REQUEST_COUNT do
-          local r = client:get(ROUTE_PATH, {
+          local r = client:get(LOCAL_ROUTE_PATH, {
             headers = {
               ["X-Country"] = "Italy"
+            }
+          })
+
+          assert.response(r).has.status(200)
+        end
+
+        local _, default_request_count, default_errors_count = default_server:done()
+        local _, alternate_request_count, alternate_errors = alternate_server:done()
+
+        -- verify
+        assert.same({REQUEST_COUNT, 0}, {default_request_count, default_errors_count})
+        assert.same({0, 0}, {alternate_request_count, alternate_errors})
+
+      end)
+  
+      it("routes to default upstream if rule headers are set to unmatched values", function()
+        for i=1,REQUEST_COUNT do
+          local r = client:get(LOCAL_ROUTE_PATH, {
+            headers = {
+              ["X-Country"] = "Germany", ["X-Regione"] = "Abruzzo"
             }
           })
 
@@ -166,7 +251,7 @@ for _, strategy in helpers.each_strategy() do
 
       end)
 
-      it("doesn't change default upstream for request not mapped by associated route", function()
+      it("routes to default upstream for request not mapped by associated route", function()
         for i=1,REQUEST_COUNT do
           local r = client:get("/something", {
             headers = {
@@ -186,7 +271,7 @@ for _, strategy in helpers.each_strategy() do
 
       end)
 
-      it("matching works not only for the first rule", function()
+      it("routes to alternate upstream if more than one rule is configured", function()
 
         for i=1,REQUEST_COUNT do
           local r = client:get(ALTERNATE_ROUTE_PATH, {
