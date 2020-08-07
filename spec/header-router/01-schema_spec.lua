@@ -43,4 +43,15 @@ describe(PLUGIN_NAME .. ": (schema)", function()
     assert.is_falsy(ok)
   end)
 
+  it("condition can't contain duplicated headers", function()
+    local ok, err = validate(
+      { rules = {
+        { condition = {["X-Country"] = "Italy", ["X-Country"] = "Poland"},
+          upstream_name = "italy_cluster" },
+      }})
+    assert.is_truthy(err)
+    assert.is_nil(ok)
+    
+  end)
+
 end)
