@@ -85,13 +85,11 @@ for _, strategy in helpers.each_strategy() do
     
       local consumer_route = bp.routes:insert({
         paths   = {CONSUMER_ROUTE_PATH},
-        service = {id = another_service.id}
+        service = {id = another_service.id},
+        hosts    = {"consumer_host"},
       })
      
-      consumer = bp.consumers:insert {
-        username = "dawid"
-      }
-      
+      consumer = bp.consumers:insert()
       
       bp.keyauth_credentials:insert {
         key      = KEY,
@@ -351,6 +349,8 @@ for _, strategy in helpers.each_strategy() do
         for i=1,REQUEST_COUNT do
           local r = client:post(CONSUMER_ROUTE_PATH, {
             headers = {
+              -- explicit binding by host required for Kong <2.0
+              ["Host"] = "consumer_host",
               ["X-Country"] = "Italy", ["host"] = "localhost", ["X-Regione"] = "Abruzzo",
               ["apikey"] = KEY
             }
