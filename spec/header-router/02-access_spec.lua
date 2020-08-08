@@ -171,7 +171,7 @@ for _, strategy in helpers.each_strategy() do
       if client then client:close() end
     end)
   
-    local function assert_default_routing(path, params) 
+    local function assert_upstream_is_chosen(path, params, expected_response_matrix)
       for i=1,REQUEST_COUNT do
           local r = client:get(path, {
             headers = params.headers
@@ -186,219 +186,148 @@ for _, strategy in helpers.each_strategy() do
         alternate_server:done()
 
         -- verify
-        assert.same({REQUEST_COUNT, 0}, {default_request_count, default_errors_count})
-        assert.same({0, 0}, {alternate_request_count, alternate_errors})
+        assert.same(expected_response_matrix[1], {default_request_count, default_errors_count})
+        assert.same(expected_response_matrix[2], {alternate_request_count, alternate_errors})
+    end
+  
+    local function assert_default_upstream_is_chosen(path, params) 
+      local default_upstream_success_count = REQUEST_COUNT
+      assert_upstream_is_chosen(path, params,
+                                {{default_upstream_success_count, 0},
+                                 {0, 0}})
     end 
     
-    local function assert_no_routing(path, params) 
-      for i=1,REQUEST_COUNT do
-          local r = client:get(path, {
-            headers = params.headers
-          })
+    local function assert_alternate_upstream_is_chosen(path, params) 
+      local alternate_upstream_success_count = REQUEST_COUNT
+      assert_upstream_is_chosen(path, params,
+                                {{0, 0},
+                                 {alternate_upstream_success_count, 0}})
+    end 
 
-          assert.response(r).has.status(params.expected_reponse_status)
-        end
-
-        local _, default_request_count, default_errors_count = 
-        default_server:done()
-        local _, alternate_request_count, alternate_errors = 
-        alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({0, 0}, {alternate_request_count, alternate_errors})
+    local function assert_no_upstream_is_chosen(path, params) 
+      assert_upstream_is_chosen(path, params,
+                                {{0, 0},
+                                 {0, 0}})
     end 
     
 
-    describe("Default upstream routing ", function()
+    describe("Plugin is not applied", function()
         
-      it("defaults if routing header is not set", function()
+      it("if routing header is not set", function()
         
-        assert_default_routing(LOCAL_ROUTE_PATH, {
+        assert_default_upstream_is_chosen(LOCAL_ROUTE_PATH, {
               headers = {},
               expected_reponse_status = 200
         })
 
       end)
         
-      it("defaults if rule is matched partially", function()
+      it("if rule is matched partially", function()
           
-        assert_default_routing(LOCAL_ROUTE_PATH, {
+        assert_default_upstream_is_chosen(LOCAL_ROUTE_PATH, {
               headers = {["X-Country"] = "Italy"},
               expected_reponse_status = 200
         })
       
       end)
     
-      it("defaults if rule headers are set to unmatched values", function()
+      it("if rule headers are set to unmatched values", function()
           
-        assert_default_routing(LOCAL_ROUTE_PATH, {
+        assert_default_upstream_is_chosen(LOCAL_ROUTE_PATH, {
               headers = {["X-Country"] = "Germany", ["X-Regione"] = "Abruzzo"},
               expected_reponse_status = 200
         })
         
      end)
   
-      
     end)
 
-    describe("Alternate upstream routing succeeds", function()
+    describe("Plugin is applied", function()
         
       
       it("if all rule headers are set", function()
-        for i=1,REQUEST_COUNT do
-          local r = client:get(LOCAL_ROUTE_PATH, {
-            headers = {
-              ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
-            }
-          })
-
-          assert.response(r).has.status(200)
-        end
-
-        local _, default_request_count, default_errors_count = default_server:done()
-        local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+          
+        assert_alternate_upstream_is_chosen(LOCAL_ROUTE_PATH, {
+              headers = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"},
+              expected_reponse_status = 200
+        })
 
       end)
   
-      it("if all rule headers are set in different order", function()
-        for i=1,REQUEST_COUNT do
-          local r = client:get(LOCAL_ROUTE_PATH, {
-            headers = {
-              ["X-Regione"] = "Abruzzo", ["X-Country"] = "Italy"
-            }
-          })
-
-          assert.response(r).has.status(200)
-        end
-
-        local _, default_request_count, default_errors_count = default_server:done()
-        local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+      it("if all rule headers are set in a different order", function()
+        
+        assert_alternate_upstream_is_chosen(LOCAL_ROUTE_PATH, {
+              headers = {["X-Regione"] = "Abruzzo", ["X-Country"] = "Italy"},
+              expected_reponse_status = 200
+        })
+        
       end)
   
       it("if more headers than required for a rule are set", function()
-        for i=1,REQUEST_COUNT do
-          local r = client:get(LOCAL_ROUTE_PATH, {
+        
+         assert_alternate_upstream_is_chosen(LOCAL_ROUTE_PATH, {
             headers = {
               ["X-Country"] = "Italy", ["host"] = "localhost", ["X-Regione"] = "Abruzzo",
-              ["X-Forwader-For"] = nil
-            }
-          })
-
-          assert.response(r).has.status(200)
-        end
-
-        local _, default_request_count, default_errors_count = default_server:done()
-        local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+              ["X-Forwader-For"] = nil 
+            },
+            expected_reponse_status = 200
+        })
 
       end)
 
       -- RFC 7230
       it("if header names are matchable in a different case", function()
-        for i=1,REQUEST_COUNT do
-          local r = client:get(LOCAL_ROUTE_PATH, {
+        
+        assert_alternate_upstream_is_chosen(LOCAL_ROUTE_PATH, {
             headers = {
               ["X-country"] = "Italy", ["x-Regione"] = "Abruzzo"
-            }
-          })
-
-          assert.response(r).has.status(200)
-        end
-
-        local _, default_request_count, default_errors_count = default_server:done()
-        local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
+            },
+            expected_reponse_status = 200
+        })
+        
       end)
       
-      it("if plugin is enabled for a route", function()
-        for i=1,REQUEST_COUNT do
-          local r = client:get(ANOTHER_ROUTE_PATH, {
+      it("if it is enabled for a route", function()
+        
+        assert_alternate_upstream_is_chosen(ANOTHER_ROUTE_PATH, {
             headers = {
               ["X-Country"] = "Italy", ["host"] = "localhost", ["X-Regione"] = "Abruzzo",
-            }
-          })
-
-          assert.response(r).has.status(200)
-        end
-
-        local _, default_request_count, default_errors_count = default_server:done()
-        local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
-
+            },
+            expected_reponse_status = 200
+        })
+     
       end)
   
-      it("if plugin is enabled for a consumer", function()
-        for i=1,REQUEST_COUNT do
-          local r = client:post(CONSUMER_ROUTE_PATH, {
+      it("if it is enabled for a consumer", function()
+        
+        assert_alternate_upstream_is_chosen(CONSUMER_ROUTE_PATH, {
             headers = {
               -- explicit binding by host required for Kong <2.0
-              ["Host"] = "consumer_host",
-              ["X-Country"] = "Italy", ["host"] = "localhost", ["X-Regione"] = "Abruzzo",
+              ["Host"] = "consumer_host", ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo",
               ["apikey"] = KEY
-            }
-          })
-
-          assert.response(r).has.status(200)
-        end
-
-        local _, default_request_count, default_errors_count = default_server:done()
-        local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
-
+            },
+            expected_reponse_status = 200
+        })
+     
       end)
       
-
-
       it("if more than one rule is configured", function()
-
-        for i=1,REQUEST_COUNT do
-          local r = client:get(ALTERNATE_ROUTE_PATH, {
+        
+        assert_alternate_upstream_is_chosen(ALTERNATE_ROUTE_PATH, {
             headers = {
               ["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"
-            }
-          })
-
-          assert.response(r).has.status(200)
-        end
-
-        -- collect server results; hitcount
-        local _, default_request_count, default_errors_count = default_server:done()
-        local _, alternate_request_count, alternate_errors = alternate_server:done()
-
-        -- verify
-        assert.same({0, 0}, {default_request_count, default_errors_count})
-        assert.same({REQUEST_COUNT, 0}, {alternate_request_count, alternate_errors})
-
+            },
+            expected_reponse_status = 200
+        })
+        
       end)
-    
     
     end)
 
     describe("Erors: ", function()
         it("returns 404 for request not mapped by associated route", function()
           
-        assert_no_routing(UNROUTED_PATH, {
+        assert_no_upstream_is_chosen(UNROUTED_PATH, {
               headers = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"},
               expected_reponse_status = 404
         })
