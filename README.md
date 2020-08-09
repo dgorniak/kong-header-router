@@ -4,9 +4,9 @@
 
 Simple Kong plugin which overrides default service upstream if specific headers are set.
 
-# Configuration
+## Configuration
 
-## Enable the plugin on a Service
+### Enable the plugin on a Service
 
 To enable this plugin on a Service execute following request:
 
@@ -21,7 +21,7 @@ Where:
 
 **`{configuration}`**: the configuration object described in the [Attributes](#attributes) section. 
 
-## Enable the plugin on a Route
+### Enable the plugin on a Route
 
 To enable this plugin on a route execute following request:
 
@@ -36,7 +36,7 @@ Where:
 
 **`{configuration}`**: the configuration object described in the [Attributes](#attributes) section.
 
-## Enable the plugin on a Consumer
+### Enable the plugin on a Consumer
 
 To enable this plugin on a consumer execute following request:
 
@@ -50,7 +50,7 @@ Where:
 
 **`{configuration}`**: the configuration object described in the [Attributes](#attributes) section .
 
-## Enable the plugin globally
+### Enable the plugin globally
 
 This plugin can be enabled globally so it will be run on every request Kong handles.
 
@@ -59,7 +59,7 @@ $ curl -X POST http://localhost:8001/plugins -d "name=header-router"
   -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}}
 ```
 
-## <a name="attributes"></a> Attributes
+### <a name="attributes"></a> Attributes
 
 The table below lists plugin specific parameters which can be used in the configuration.
 
@@ -71,7 +71,7 @@ Attribute                                  | Description
 `name`                                     | The name of the plugin to use, in this case: `header-router`
 `config.rules`                             | The list of rules which will be matched by the plugin
 
-### Rules
+#### Rules
 
 Attribute                  | Description
 ---------------------------| -------------
@@ -80,7 +80,7 @@ Attribute                  | Description
 
 A rule can consist of multiple header names and values, a request must containt all of the specified headers with the specified values to be matched by the rule.
 
-# Example
+## Example
 
 Create a default upstream object:
 
