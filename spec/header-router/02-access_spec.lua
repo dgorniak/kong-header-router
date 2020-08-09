@@ -112,7 +112,8 @@ for _, strategy in helpers.each_strategy() do
         name     = "key-auth",
         route = { id = consumer_route.id },
       }
-    
+      
+      -- Consumer specific configuration
       bp.plugins:insert {
         name = PLUGIN_NAME,
         consumer = { id = consumer.id },
@@ -122,7 +123,8 @@ for _, strategy in helpers.each_strategy() do
           }
         },
       }
-
+      
+      -- Service specific configuration
       bp.plugins:insert {
         name = PLUGIN_NAME,
         service = { id = default_service.id },
@@ -133,6 +135,7 @@ for _, strategy in helpers.each_strategy() do
         },
       }
 
+      -- Service specific configuration
       bp.plugins:insert {
         name = PLUGIN_NAME,
         service = { id = alternate_service.id },
@@ -144,6 +147,7 @@ for _, strategy in helpers.each_strategy() do
         },
       }
       
+      -- Route specific configuration
       bp.plugins:insert {
         name = PLUGIN_NAME,
         route = { id = another_route.id },
@@ -155,6 +159,7 @@ for _, strategy in helpers.each_strategy() do
         },
       }
       
+      -- Global configuration
       bp.plugins:insert {
         name = PLUGIN_NAME,
         config = {
@@ -343,7 +348,7 @@ for _, strategy in helpers.each_strategy() do
      
       end)  
       
-      it("if more than one rule is configured", function()
+      it("if more than one header is defined in a rule", function()
         
         assert_alternate_upstream_is_chosen(ALTERNATE_ROUTE_PATH, {
             headers = {
