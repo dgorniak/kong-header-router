@@ -9,6 +9,7 @@ local LOCAL_ROUTE_PATH = "/local"
 local ALTERNATE_ROUTE_PATH = "/alternate"
 local ANOTHER_ROUTE_PATH = "/another"
 local CONSUMER_ROUTE_PATH = "/userspecific"
+local GLOBAL_ROUTE_PATH = "/global"
 local UNROUTED_PATH = "/unrouted"
 local DISABLE_DETAILED_LOGS = "false"
 
@@ -62,6 +63,12 @@ for _, strategy in helpers.each_strategy() do
         name = "consumer_service",
         host = "europe_cluster"
       }
+      
+      local global_service = bp.services:insert {
+        protocol = "http",
+        name = "global_service",
+        host = "europe_cluster"
+      }
 
       bp.routes:insert({
         paths = {ALTERNATE_ROUTE_PATH},
@@ -76,6 +83,11 @@ for _, strategy in helpers.each_strategy() do
       bp.routes:insert({
         paths = {CONSUMER_ROUTE_PATH},
         service = {id = consumer_service.id},
+      })
+    
+      bp.routes:insert({
+        paths = {GLOBAL_ROUTE_PATH},
+        service = {id = global_service.id},
       })
 
       local another_route = bp.routes:insert({
@@ -142,6 +154,15 @@ for _, strategy in helpers.each_strategy() do
           }
         },
       }
+      
+      bp.plugins:insert {
+        name = PLUGIN_NAME,
+        config = {
+          rules = {
+            { condition = {["X-Global-Country"] = "Italy"}, upstream_name = "italy_cluster"},
+          }
+        },
+      }
 
       -- start kong
       assert(helpers.start_kong({
@@ -186,8 +207,8 @@ for _, strategy in helpers.each_strategy() do
         alternate_server:done()
 
         -- verify
-        assert.same(expected_response_matrix[1], {default_request_count, default_errors_count})
-        assert.same(expected_response_matrix[2], {alternate_request_count, alternate_errors})
+        assert.same({default_request_count, default_errors_count}, expected_response_matrix[1])
+        assert.same({alternate_request_count, alternate_errors}, expected_response_matrix[2])
     end
   
     local function assert_default_upstream_is_chosen(path, params) 
@@ -310,6 +331,17 @@ for _, strategy in helpers.each_strategy() do
         })
      
       end)
+  
+      it("if it is enabled globally", function()
+        
+        assert_alternate_upstream_is_chosen(GLOBAL_ROUTE_PATH, {
+            headers = {
+              ["X-Global-Country"] = "Italy"
+            },
+            expected_reponse_status = 200
+        })
+     
+      end)  
       
       it("if more than one rule is configured", function()
         
