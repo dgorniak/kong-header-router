@@ -361,7 +361,7 @@ for _, strategy in helpers.each_strategy() do
     
     end)
 
-    describe("Erors: ", function()
+    describe("Errors: ", function()
         it("returns 404 for request not mapped by associated route", function()
           
         assert_no_upstream_is_chosen(UNROUTED_PATH, {
