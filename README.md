@@ -12,7 +12,7 @@ To enable this plugin on a Service execute following request:
 
 ```console
 $ curl -X POST http://localhost:8001/services/{service}/plugins \ 
-  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}'} 
+  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}}' 
 ```
 
 Where:
@@ -27,7 +27,7 @@ To enable this plugin on a route execute following request:
 
 ```bash
 $ curl -X POST http://localhost:8001/routes/${route}/plugins \
-  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}'}
+  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}}'
 ```
 
 Where:
@@ -42,7 +42,7 @@ To enable this plugin on a consumer execute following request:
 
 ```bash
 $ curl -X POST http://localhost:8001/consumers/{consumer}/plugins \
- -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}'}
+ -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}}'
 ```
 Where:
 
@@ -56,7 +56,7 @@ This plugin can be enabled globally so it will be run on every request Kong hand
 
 ```bash
 $ curl -X POST http://localhost:8001/plugins -H 'Content-Type: application/json' \
-   --data '{"name": "header-router", "config": {configuration}}
+   --data '{"name": "header-router", "config": {configuration}}'
 ```
 
 ### <a name="attributes"></a> Attributes
