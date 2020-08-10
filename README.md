@@ -10,9 +10,9 @@ Simple Kong plugin which overrides default service upstream if specific headers 
 
 To enable this plugin on a Service execute following request:
 
-```bash
-$ curl -X POST http://localhost:8001/services/{service_id}/plugins -d "name=header-router" \ 
-  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}} 
+```console
+$ curl -X POST http://localhost:8001/services/{service}/plugins \ 
+  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}'} 
 ```
 
 Where:
@@ -26,8 +26,8 @@ Where:
 To enable this plugin on a route execute following request:
 
 ```bash
-$ curl -X POST http://localhost:8001/routes/{route_id}/plugins -d "name=header-router"
-  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}}
+$ curl -X POST http://localhost:8001/routes/${route}/plugins \
+  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}'}
 ```
 
 Where:
@@ -41,8 +41,8 @@ Where:
 To enable this plugin on a consumer execute following request:
 
 ```bash
-$ curl -X POST http://localhost:8001/consumers/{consumer}/plugins -d "name=header-router"
- -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}}
+$ curl -X POST http://localhost:8001/consumers/{consumer}/plugins \
+ -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}'}
 ```
 Where:
 
@@ -55,8 +55,8 @@ Where:
 This plugin can be enabled globally so it will be run on every request Kong handles.
 
 ```bash
-$ curl -X POST http://localhost:8001/plugins -d "name=header-router" 
-  -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {configuration}}
+$ curl -X POST http://localhost:8001/plugins -H 'Content-Type: application/json' \
+   --data '{"name": "header-router", "config": {configuration}}
 ```
 
 ### <a name="attributes"></a> Attributes
@@ -69,7 +69,7 @@ for more information.
 Attribute                                  | Description
 ------------------------------------------:| ------------
 `name`                                     | The name of the plugin to use, in this case: `header-router`
-`config.rules`                             | The list of rules which will be matched by the plugin
+`config.rules`                             | The dictionary of rules which will be matched by the plugin
 
 #### Rules
 
@@ -159,7 +159,11 @@ HTTP/1.1 201 Created
 The plugin can be enabled for the service:
 
 ```bash
-$ curl -i -X POST http://localhost:8001/services/service/plugins -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {"rules":[{"condition": {"X-Country":"Italy"}, "upstream_name": "alternate.host.com"}]}}' curl -i -X POST http://localhost:8001/services/service/plugins -H 'Content-Type: application/json' --data '{"name": "header-router", "config": {"rules":[{"condition": {"X-Country":"Italy"}, "upstream_name": "alternate.host.com"}]}}'
+$ curl -i -X POST http://localhost:8001/services/service/plugins -H 'Content-Type: application/json' \
+   --data '{"name": "header-router", "config": \
+             {"rules":[ \ 
+               {"condition": {"X-Country":"Italy"}, "upstream_name": "alternate.host.com"} \ 
+             ]}}'
 ...
 HTTP/1.1 201 Created
 ```
