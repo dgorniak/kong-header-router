@@ -119,7 +119,8 @@ for _, strategy in helpers.each_strategy() do
         consumer = { id = consumer.id },
         config = {
           rules = {
-            { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"}, upstream_name = "italy_cluster" },
+            { condition = {["X-Country"] = "Italy" }, upstream_name = "europe_cluster" },
+            { condition = {["X-Country"] = "Italy", ["X-Regione"] = "Abruzzo"}, upstream_name = "italy_cluster" }
           }
         },
       }
